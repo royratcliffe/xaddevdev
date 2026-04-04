@@ -9,11 +9,11 @@ int main(int argc, char *argv[]) {
   if (rc < 0) {
     return rc;
   }
-  OCCURS(epoll_init, &epoll);
+  OCCURS(epoll, &epoll);
 
   while ((rc = wait_for_epoll_events(&epoll, 1000)) >= 0) {
     for (int i = 0; i < rc; i++) {
-      OCCURS(epoll, epoll.events + i);
+      OCCURS(epoll_event, epoll.events + i);
     }
   }
   if (rc < 0) {
