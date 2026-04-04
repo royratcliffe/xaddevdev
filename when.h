@@ -94,11 +94,13 @@
   __asm(".sdecl\t'when_" #_when_ "',data,rom,concat,protect\n\
 \t.sect\t'when_" #_when_ "'\n\
 \t.align\t4\n\
-\t.word\t" #_what_)
+\t.word\t" #_what_);                                         \
+  static void _what_(void *with, ...)
 #elif defined(__GNUC__)
-#define CAUSES(_when_, _what_)         \
-  static void _what_(void *with, ...); \
-  SECTION_USED(when_##_when_) static void (*const __when__##_what_)(void *with, ...) = &_what_
+#define CAUSES(_when_, _what_)                                                                  \
+  static void _what_(void *with, ...);                                                          \
+  SECTION_USED(when_##_when_) static void (*const __when__##_what_)(void *with, ...) = &_what_; \
+  static void _what_(void *with, ...)
 #endif /* __TASKING__ || __GNUC__ */
 
 /*!
