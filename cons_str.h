@@ -1,3 +1,15 @@
+/*!
+ * \file cons_str.h
+ * \brief Header file for string-based cons cell operations.
+ * \details This header declares functions for working with cons cells that
+ * store strings in their \c car field. It includes functions for finding a cons
+ * cell by string, adding a new cons cell with a string, and removing a cons
+ * cell by string. The implementation of these functions is provided in the
+ * corresponding \c cons_str.c file.
+ */
+#ifndef CONS_STR_H
+#define CONS_STR_H
+
 #include <cons.h>
 
 /*!
@@ -31,3 +43,5 @@ struct cons **cons_str(struct cons **list, struct cons *cell, const char *str);
  * of the removed cell itself if necessary.
  */
 struct cons *cons_remove_str(struct cons **list, const char *str);
+
+#endif /* CONS_STR_H */

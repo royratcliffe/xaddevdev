@@ -1,3 +1,7 @@
+/*!
+ * \file cons_str.c
+ * \brief Implementation of string-based cons cell operations.
+ */
 #include "cons_str.h"
 
 #include <stdlib.h>
