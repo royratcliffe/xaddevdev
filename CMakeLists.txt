@@ -13,6 +13,7 @@ add_executable(xaddevdev
     ev.c
     devinput.c
     input_devices.c
+    names.c
     evioc.c
     inotify.c
     epoll.c
