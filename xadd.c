@@ -100,6 +100,23 @@ CAUSES(input_event, xadd_input_event) {
   const long long min_id = timeval_ms(&tv) - (10 * 1000LL);
   const long long time = timeval_ms(&input_event->time);
 
+  /*
+   * Convert the input event type and code to their corresponding names using
+   * the typename() and codename() functions. The typename() function takes an
+   * input event type as an argument and returns the name of the type as a
+   * string, or "?" if the type is unknown. The codename() function takes an
+   * input event type and code as arguments and returns the name of the code as
+   * a string, or "?" if the code is unknown.
+   *
+   * Include the human-readable names of the input event type and code in the
+   * Redis stream entry, which provide more context and make it easier to
+   * understand the nature of the input event when analysing the stream data.
+   * This can be particularly helpful for debugging and troubleshooting
+   * purposes, as it allows us to quickly identify the type of input event and
+   * its associated code without needing to refer to documentation or lookup
+   * tables, making it easier to interpret the stream data and gain insights
+   * into user interactions and device behaviour.
+   */
   const char *type = typename(input_event->type);
   const char *code = codename(input_event->type, input_event->code);
   redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u typename %s code %u codename %s value %d",
