@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #define pr_info(...) fprintf(stdout, ##__VA_ARGS__)
+#define pr_warn(...) fprintf(stdout, ##__VA_ARGS__)
 #define pr_err(...) fprintf(stderr, ##__VA_ARGS__)
 
 #endif /* PR_H_ */
