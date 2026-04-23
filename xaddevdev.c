@@ -80,6 +80,7 @@ int main(int argc, char *argv[]) {
     }
   }
   if (rc < 0) {
+    pr_err("Error waiting for epoll events: %d (%s)\n", -rc, strerror(-rc));
     return -rc;
   }
 
