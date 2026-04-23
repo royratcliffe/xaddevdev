@@ -1,6 +1,7 @@
 #include "xaddevdev.h"
 #include "epoll.h"
 #include "pr.h"
+#include "version.h"
 #include "when.h"
 
 #include <errno.h>
@@ -12,18 +13,22 @@ static struct epoll epoll;
 struct epoll *xaddevdev_epoll(void) { return &epoll; }
 
 int main(int argc, char *argv[]) {
-  static struct option longopts[] = {{"host", required_argument, NULL, 'h'},
+  static struct option longopts[] = {{"version", no_argument, NULL, 'V'},
+                                     {"host", required_argument, NULL, 'h'},
                                      {"port", required_argument, NULL, 'p'},
                                      {"help", no_argument, NULL, '?'},
                                      {
                                          NULL,
                                      }};
   int c, longind;
-  while ((c = getopt_long(argc, argv, "h:p:?", longopts, &longind)) >= 0) {
+  while ((c = getopt_long(argc, argv, "Vh:p:?", longopts, &longind)) >= 0) {
     switch (c) {
     case 0:
       OCCURS(long_opt, longopts + longind, optarg);
       break;
+    case 'V':
+      pr_info("xaddevdev version %s\n", VERSION);
+      return EXIT_SUCCESS;
     case 'h':
       OCCURS(opt_h, optarg);
       break;
