@@ -88,7 +88,7 @@ CAUSES(inotify_event, handle_inotify_events) {
   if (event->mask & IN_ISDIR) {
     return;
   }
-  pr_err("Inotify event: wd=%d mask=0x%08x cookie=%u len=%u name=%s\n", event->wd, event->mask, event->cookie, event->len, event->name);
+  pr_debug("Inotify event: wd=%d mask=0x%08x cookie=%u len=%u name=%s\n", event->wd, event->mask, event->cookie, event->len, event->name);
   if (event->mask & IN_CREATE) {
     /*
      * The newly-created entry in the /dev/input directory may not be an input
@@ -143,14 +143,14 @@ int scan_input_devices(const char *dirname, struct epoll *epoll) {
     }
 
     if ((input_device = add_input_device(entry->d_name, fd)) == NULL) {
-      pr_err("Failed to add input device: %d (%s)\n", errno, strerror(errno));
+      pr_warn("Failed to add input device: %d (%s)\n", errno, strerror(errno));
       (void)close(fd);
       continue;
     }
     pr_info("Entry: %s\n", entry->d_name);
 
     if (add_epoll_event(epoll, fd, EPOLLIN, (epoll_data_t){.ptr = input_device}) < 0) {
-      pr_err("Failed to add epoll event for device %s/%s: %d (%s)\n", dirname, entry->d_name, errno, strerror(errno));
+      pr_warn("Failed to add epoll event for device %s/%s: %d (%s)\n", dirname, entry->d_name, errno, strerror(errno));
       remove_input_device(entry->d_name);
       continue;
     }
