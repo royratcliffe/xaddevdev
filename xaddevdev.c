@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     }
   }
   if (rc < 0) {
-    return rc;
+    return -rc;
   }
 
   close_epoll(&epoll);
