@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
     case '?':
       pr_info("Usage: %s [OPTIONS]\n", argv[0]);
       pr_info("Options:\n");
+      pr_info("  -V, --version          Show version information and exit\n");
       pr_info("  -h, --host=HOST        Connect to Redis server at HOST\n");
       pr_info("  -p, --port=PORT        Connect to Redis server at PORT\n");
       pr_info("  -?, --help             Show this help message and exit\n");
