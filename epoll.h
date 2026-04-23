@@ -50,8 +50,30 @@ int create_epoll(struct epoll *epoll, int maxevents);
  */
 int add_epoll_event(struct epoll *epoll, int fd, uint32_t events, epoll_data_t data);
 
+/*!
+ * \brief Modifies the events and data associated with a file descriptor in the epoll instance.
+ * \param epoll The epoll instance containing the file descriptor to modify.
+ * \param fd The file descriptor to modify in the epoll instance.
+ * \param events The new events to monitor for the file descriptor (e.g., EPOLLIN, EPOLLOUT).
+ * \param data The new user data to associate with the file descriptor in the epoll instance.
+ * \return 0 on success, or -errno on failure.
+ * \details This function creates an epoll_event structure with the specified
+ * events and data, and then calls epoll_ctl with the EPOLL_CTL_MOD operation to
+ * modify the existing file descriptor in the epoll instance. If the operation
+ * fails, it logs an error message and returns the negative errno value. On
+ * success, it returns 0.
+ */
 int modify_epoll_event(struct epoll *epoll, int fd, uint32_t events, epoll_data_t data);
 
+/*!
+ * \brief Deletes a file descriptor from the epoll instance.
+ * \param epoll The epoll instance containing the file descriptor to delete.
+ * \param fd The file descriptor to delete from the epoll instance.
+ * \return 0 on success, or -errno on failure.
+ * \details This function calls epoll_ctl with the EPOLL_CTL_DEL operation to
+ * remove the specified file descriptor from the epoll instance. If the
+ * operation fails, it returns the negative errno value.
+ */
 int delete_epoll_event(struct epoll *epoll, int fd);
 
 /*!
