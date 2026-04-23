@@ -8,7 +8,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 
-static struct epoll epoll;
+static struct epoll epoll = {.fd = -1};
 
 struct epoll *xaddevdev_epoll(void) { return &epoll; }
 
