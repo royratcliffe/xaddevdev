@@ -1,8 +1,10 @@
 #include "xaddevdev.h"
 #include "epoll.h"
+#include "pr.h"
 #include "when.h"
 
 #include <errno.h>
+#include <getopt.h>
 #include <stdlib.h>
 
 static struct epoll epoll;
@@ -10,6 +12,40 @@ static struct epoll epoll;
 struct epoll *xaddevdev_epoll(void) { return &epoll; }
 
 int main(int argc, char *argv[]) {
+  static struct option longopts[] = {{"host", required_argument, NULL, 'h'},
+                                     {"port", required_argument, NULL, 'p'},
+                                     {"help", no_argument, NULL, '?'},
+                                     {
+                                         NULL,
+                                     }};
+  int c, longind;
+  while ((c = getopt_long(argc, argv, "h:p:?", longopts, &longind)) >= 0) {
+    switch (c) {
+    case 0:
+      OCCURS(long_opt, longopts + longind, optarg);
+      break;
+    case 'h':
+      OCCURS(opt_h, optarg);
+      break;
+    case 'p':
+      OCCURS(opt_p, optarg);
+      break;
+    case '?':
+      pr_info("Usage: %s [OPTIONS]\n", argv[0]);
+      pr_info("Options:\n");
+      pr_info("  -h, --host=HOST        Connect to Redis server at HOST\n");
+      pr_info("  -p, --port=PORT        Connect to Redis server at PORT\n");
+      pr_info("  -?, --help             Show this help message and exit\n");
+      return EXIT_SUCCESS;
+    default:
+      pr_warn("Unknown option: 0%o\n", c);
+      return EXIT_FAILURE;
+    }
+  }
+  if (optind < argc) {
+    pr_err("Unexpected non-option argument: %s\n", argv[optind]);
+    return EXIT_FAILURE;
+  }
   int rc = create_epoll(&epoll, 10);
   if (rc < 0) {
     return rc;
