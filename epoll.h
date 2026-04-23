@@ -61,6 +61,7 @@ int wait_for_epoll_events(struct epoll *epoll, int timeout);
 /*!
  * \brief Closes an epoll instance and frees associated resources.
  * \param epoll The epoll instance to close.
+ * \return 0 on success, or -errno on failure.
  * \details This function closes the file descriptor associated with the epoll
  * instance and frees the memory allocated for the events array. It checks if
  * the file descriptor is valid before attempting to close it, and logs an error
@@ -68,6 +69,6 @@ int wait_for_epoll_events(struct epoll *epoll, int timeout);
  * sets the fd to -1 to indicate that it is no longer valid. Finally, it frees
  * the events array and sets the pointer to NULL to prevent dangling pointers.
  */
-void close_epoll(struct epoll *epoll);
+int close_epoll(struct epoll *epoll);
 
 #endif /* EPOLL_H_ */
