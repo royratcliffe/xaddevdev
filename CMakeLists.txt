@@ -31,7 +31,7 @@ target_include_directories(xaddevdev PRIVATE . "${CMAKE_CURRENT_BINARY_DIR}")
 # can link against the library and include the necessary headers for Redis
 # functionality.
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(HIREDIS hiredis)
+pkg_check_modules(HIREDIS hiredis REQUIRED)
 if(HIREDIS_FOUND)
     message(STATUS "Found hiredis library: ${HIREDIS_LIBRARIES}")
 
