@@ -26,7 +26,7 @@ CAUSES(opt_p, xadd_opt_p) {
 }
 
 CAUSES(epoll, xadd_epoll) {
-  pr_info("Redis epoll event handler registered.\n");
+  pr_debug("Redis epoll event handler registered\n");
   redis = redisConnectWithOptions(&options);
   if (redis == NULL || redis->err) {
     pr_err("Failed to connect to Redis: %s\n", redis ? redis->errstr : "unknown error");
@@ -102,18 +102,18 @@ CAUSES(input_event, xadd_input_event) {
   redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u code %u value %d", min_id, name, time,
                                    input_event->type, input_event->code, input_event->value);
   if (reply == NULL) {
-    pr_err("Failed to publish input event to Redis: %s\n", redis->errstr);
+    pr_err("Failed to add input event to Redis: %s\n", redis->errstr);
     return;
   }
   switch (reply->type) {
   case REDIS_REPLY_STRING:
-    pr_info("Redis reply: %s\n", reply->str);
+    pr_debug("Redis reply: %s\n", reply->str);
     break;
   case REDIS_REPLY_ARRAY:
-    pr_info("Redis reply is an array with %zu elements.\n", reply->elements);
+    pr_debug("Redis reply is an array with %zu elements.\n", reply->elements);
     break;
   case REDIS_REPLY_ERROR:
-    pr_err("Error reply from Redis: %s\n", reply->str);
+    pr_warn("Error reply from Redis: %s\n", reply->str);
     break;
   default:
     pr_info("Redis reply type: %d\n", reply->type);
