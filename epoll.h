@@ -50,6 +50,10 @@ int create_epoll(struct epoll *epoll, int maxevents);
  */
 int add_epoll_event(struct epoll *epoll, int fd, uint32_t events, epoll_data_t data);
 
+int modify_epoll_event(struct epoll *epoll, int fd, uint32_t events, epoll_data_t data);
+
+int delete_epoll_event(struct epoll *epoll, int fd);
+
 /*!
  * \brief Wait for events on an epoll instance.
  * \param epoll The epoll instance to wait on.
