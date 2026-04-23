@@ -143,7 +143,7 @@ int scan_input_devices(const char *dirname, struct epoll *epoll) {
     }
 
     if ((input_device = add_input_device(entry->d_name, fd)) == NULL) {
-      pr_warn("Failed to add input device: %d (%s)\n", errno, strerror(errno));
+      pr_warn("Failed to add input device %s: %d (%s)\n", entry->d_name, errno, strerror(errno));
       (void)close(fd);
       continue;
     }
