@@ -102,9 +102,15 @@ CAUSES(input_event, xadd_input_event) {
 
   const char *type = typename(input_event->type);
   const char *code = codename(input_event->type, input_event->code);
-  redisReply *reply =
-      redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u typename %s code %u codename %s value %d", min_id, name, time,
-                   input_event->type, type, input_event->code, code, input_event->value);
+  redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u typename %s code %u codename %s value %d",
+                                   /* minimum ID: */ min_id,
+                                   /* device name: */ name,
+                                   /* timestamp in milliseconds: */ time,
+                                   /* type as an integer: */ input_event->type,
+                                   /* name of the type or "?" if unknown: */ type,
+                                   /* code as an integer: */ input_event->code,
+                                   /* name of the code or "?" if unknown: */ code,
+                                   /* value: */ input_event->value);
   if (reply == NULL) {
     pr_err("Failed to add input event to Redis: %s\n", redis->errstr);
     return;
@@ -124,5 +130,12 @@ CAUSES(input_event, xadd_input_event) {
     break;
   }
   freeReplyObject(reply);
-  pr_info("Input event: device=%s time=%lld type=%u typename=%s code=%u codename=%s value=%d\n", name, time, input_event->type, type, input_event->code, code, input_event->value);
+  pr_info("Input event: device=%s time=%lld type=%u typename=%s code=%u codename=%s value=%d\n",
+          /* device name: */ name,
+          /* timestamp in milliseconds: */ time,
+          /* type as an integer: */ input_event->type,
+          /* name of the type or "?" if unknown: */ type,
+          /* code as an integer: */ input_event->code,
+          /* name of the code or "?" if unknown: */ code,
+          /* value: */ input_event->value);
 }
