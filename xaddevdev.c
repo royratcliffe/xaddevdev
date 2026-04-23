@@ -1,10 +1,13 @@
+#include "xaddevdev.h"
 #include "epoll.h"
 #include "when.h"
 
 #include <errno.h>
 #include <stdlib.h>
 
-struct epoll epoll;
+static struct epoll epoll;
+
+struct epoll *xaddevdev_epoll(void) { return &epoll; }
 
 int main(int argc, char *argv[]) {
   int rc = create_epoll(&epoll, 10);
