@@ -14,6 +14,7 @@ struct epoll *xaddevdev_epoll(void) { return &epoll; }
 
 int main(int argc, char *argv[]) {
   static struct option longopts[] = {{"version", no_argument, NULL, 'V'},
+                                     {"verbose", no_argument, NULL, 'v'},
                                      {"host", required_argument, NULL, 'h'},
                                      {"port", required_argument, NULL, 'p'},
                                      {"help", no_argument, NULL, '?'},
@@ -21,7 +22,7 @@ int main(int argc, char *argv[]) {
                                          NULL,
                                      }};
   int c, longind;
-  while ((c = getopt_long(argc, argv, "Vh:p:?", longopts, &longind)) >= 0) {
+  while ((c = getopt_long(argc, argv, "Vvh:p:?", longopts, &longind)) >= 0) {
     switch (c) {
     case 0:
       OCCURS(long_opt, longopts + longind, optarg);
@@ -29,6 +30,9 @@ int main(int argc, char *argv[]) {
     case 'V':
       pr_info("xaddevdev version %s\n", VERSION);
       return EXIT_SUCCESS;
+    case 'v':
+      pr_verbosity++;
+      break;
     case 'h':
       OCCURS(opt_h, optarg);
       break;
@@ -39,6 +43,7 @@ int main(int argc, char *argv[]) {
       pr_info("Usage: %s [OPTIONS]\n", argv[0]);
       pr_info("Options:\n");
       pr_info("  -V, --version          Show version information and exit\n");
+      pr_info("  -v, --verbose          Increase verbosity level\n");
       pr_info("  -h, --host=HOST        Connect to Redis server at HOST\n");
       pr_info("  -p, --port=PORT        Connect to Redis server at PORT\n");
       pr_info("  -?, --help             Show this help message and exit\n");
