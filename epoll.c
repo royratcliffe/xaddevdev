@@ -1,7 +1,14 @@
 /* SPDX-License-Identifier: MIT */
 
+/*!
+ * \file epoll.c
+ * \brief Implementation of epoll monitoring functions for managing file descriptors.
+ * \details This file provides functions to create an epoll instance, add,
+ * modify, and delete file descriptors from the epoll instance, wait for events,
+ * and close the epoll instance. Each function handles errors by returning the
+ * negative errno value, allowing the caller to handle errors appropriately.
+ */
 #include "epoll.h"
-#include "pr.h"
 
 #include <errno.h>
 #include <stdio.h>

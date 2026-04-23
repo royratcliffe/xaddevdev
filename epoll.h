@@ -1,5 +1,17 @@
 /* SPDX-License-Identifier: MIT */
 
+/*!
+ * \file epoll.h
+ * \brief Header file for epoll monitoring functions for managing file descriptors.
+ * \details This header file declares functions to create an epoll instance,
+ * add, modify, and delete file descriptors from the epoll instance, wait for
+ * events, and close the epoll instance. Each function is designed to handle
+ * errors by returning the negative errno value, allowing the caller to handle
+ * errors appropriately. The epoll instance is represented by the struct epoll,
+ * which contains the file descriptor for the epoll instance, an array of
+ * epoll_event structures to store events, and the maximum number of events that
+ * can be stored in the array.
+ */
 #ifndef EPOLL_H_
 #define EPOLL_H_
 
