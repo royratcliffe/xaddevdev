@@ -4,8 +4,9 @@
 #include <errno.h>
 #include <stdlib.h>
 
+struct epoll epoll;
+
 int main(int argc, char *argv[]) {
-  struct epoll epoll;
   int rc = create_epoll(&epoll, 10);
   if (rc < 0) {
     return rc;
