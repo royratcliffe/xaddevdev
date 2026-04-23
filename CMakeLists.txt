@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
-project(xaddevdev)
+project(xaddevdev VERSION 1.0.0)
+
+# Generate version.h from version.h.in by replacing @PROJECT_VERSION@ with the actual version number
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/version.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/version.h"
+)
 
 add_executable(xaddevdev
     xaddevdev.c
@@ -13,7 +19,7 @@ add_executable(xaddevdev
     cons.c
     cons_str.c
 )
-target_include_directories(xaddevdev PRIVATE .)
+target_include_directories(xaddevdev PRIVATE . "${CMAKE_CURRENT_BINARY_DIR}")
 
 # libhiredis-dev is required for Redis support, which is used for caching input
 # device information and events. The library provides a C client for Redis,
