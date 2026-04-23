@@ -1,3 +1,4 @@
+#include "names.h"
 #include "pr.h"
 #include "when.h"
 
@@ -99,8 +100,9 @@ CAUSES(input_event, xadd_input_event) {
   const long long min_id = timeval_ms(&tv) - (10 * 1000LL);
   const long long time = timeval_ms(&input_event->time);
 
-  redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u code %u value %d", min_id, name, time,
-                                   input_event->type, input_event->code, input_event->value);
+  redisReply *reply =
+      redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u typename %s code %u codename %s value %d", min_id, name, time,
+                   input_event->type, typename(input_event->type), input_event->code, codename(input_event->type, input_event->code), input_event->value);
   if (reply == NULL) {
     pr_err("Failed to add input event to Redis: %s\n", redis->errstr);
     return;
