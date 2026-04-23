@@ -57,7 +57,7 @@ CAUSES(epoll_event, devinput_epoll_event) {
   struct input_event input_event;
   int rc = read_input_device_for_event(event, &input_event);
   if (rc < 0) {
-    pr_err("Failed to read input event for device %s: %d (%s)\n", device->name, -rc, strerror(-rc));
+    pr_warn("Failed to read input event for device %s: %d (%s)\n", device->name, -rc, strerror(-rc));
     return;
   }
   // pr_info("Input event: device=%s type=%u code=%u value=%d\n", device->name, input_event.type, input_event.code, input_event.value);
