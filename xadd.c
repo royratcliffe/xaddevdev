@@ -5,13 +5,31 @@
 #include <linux/input.h>
 #include <stdarg.h>
 
+static redisOptions options = {
+    .type = REDIS_CONN_TCP,
+    .endpoint.tcp.ip = "localhost",
+    .endpoint.tcp.port = 6379,
+};
+
 static redisContext *redis;
+
+CAUSES(opt_h, xadd_opt_h) {
+  const char *optarg = with;
+  pr_info("Redis host: %s\n", optarg);
+  options.endpoint.tcp.ip = optarg;
+}
+
+CAUSES(opt_p, xadd_opt_p) {
+  const char *optarg = with;
+  pr_info("Redis port: %s\n", optarg);
+  options.endpoint.tcp.port = atoi(optarg);
+}
 
 CAUSES(epoll, xadd_epoll) {
   pr_info("Redis epoll event handler registered.\n");
-  redis = redisConnect("localhost", 6379);
+  redis = redisConnectWithOptions(&options);
   if (redis == NULL || redis->err) {
-    pr_err("Failed to connect to Redis: %s\n", redis->errstr);
+    pr_err("Failed to connect to Redis: %s\n", redis ? redis->errstr : "unknown error");
     exit(EXIT_FAILURE);
   }
 }
