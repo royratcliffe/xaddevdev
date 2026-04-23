@@ -18,6 +18,7 @@ add_executable(xaddevdev
     epoll.c
     cons.c
     cons_str.c
+    pr.c
 )
 target_include_directories(xaddevdev PRIVATE . "${CMAKE_CURRENT_BINARY_DIR}")
 
