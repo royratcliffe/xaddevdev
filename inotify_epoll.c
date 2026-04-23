@@ -7,7 +7,7 @@
 
 static int inotify_fd = -1;
 
-CAUSES(epoll, init_inotify) {
+CAUSES(epoll, inotify_epoll) {
   struct epoll *epoll = (struct epoll *)with;
   inotify_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
   if (inotify_fd < 0) {
@@ -24,7 +24,7 @@ CAUSES(epoll, init_inotify) {
   OCCURS(inotify, &inotify_fd);
 }
 
-CAUSES(epoll_event, handle_inotify_events) {
+CAUSES(epoll_event, inotify_epoll_event) {
   struct epoll_event *ep_event = (struct epoll_event *)with;
   if (ep_event->data.fd != inotify_fd || !(ep_event->events & EPOLLIN)) {
     return;
