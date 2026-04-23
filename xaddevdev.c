@@ -59,7 +59,8 @@ int main(int argc, char *argv[]) {
   }
   int rc = create_epoll(&epoll, 10);
   if (rc < 0) {
-    return rc;
+    pr_err("Failed to create epoll instance: %d (%s)\n", -rc, strerror(-rc));
+    return -rc;
   }
   OCCURS(epoll, &epoll);
 
