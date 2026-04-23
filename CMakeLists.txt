@@ -5,8 +5,10 @@ add_executable(xaddevdev
     xaddevdev.c
     ev.c
     devinput.c
-    epoll.c
+    input_devices.c
+    evioc.c
     inotify.c
+    epoll.c
     cons.c
     cons_str.c
 )
