@@ -75,7 +75,7 @@ CAUSES(epoll_event, devinput_epoll_event) {
  * accordingly, such as adding new devices to the epoll instance or removing
  * devices that are no longer present.
  */
-CAUSES(inotify, handle_inotify) {
+CAUSES(inotify, devinput_inotify) {
   int inotify_fd = *(int *)with;
   if (inotify_add_watch(inotify_fd, DEV_INPUT_PATH, IN_ALL_EVENTS) < 0) {
     pr_err("Failed to add inotify watch: %d (%s)\n", errno, strerror(errno));
@@ -83,7 +83,7 @@ CAUSES(inotify, handle_inotify) {
   }
 }
 
-CAUSES(inotify_event, handle_inotify_events) {
+CAUSES(inotify_event, devinput_inotify_event) {
   struct inotify_event *event = (struct inotify_event *)with;
   if (event->mask & IN_ISDIR) {
     return;
