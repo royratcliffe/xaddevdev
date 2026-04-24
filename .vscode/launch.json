@@ -9,7 +9,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/xaddevdev",
-      "args": [],
+      "args": ["-vvv"],
       "stopAtEntry": false,
       "cwd": "${fileDirname}",
       "environment": [],
