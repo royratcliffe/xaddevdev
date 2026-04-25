@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+
 /*!
  * \file pr.c
  * \details Implementation of the pr logging functions. The pr functions provide
@@ -43,12 +45,12 @@
  */
 int pr_verbosity = 0;
 
-static const char *const pr_level_names[] = {
+static const char *const level_names[] = {
     [0 ... pr_level_max] = "UNK", [pr_level_err] = "ERR",     [pr_level_warn] = "WARN",
     [pr_level_info] = "INFO",     [pr_level_debug] = "DEBUG", [pr_level_max] = "MAX",
 };
 
-static FILE *const *pr_output[] = {
+static FILE *const *outputs[] = {
     [0 ... pr_level_max] = &stdout,
     [pr_level_err] = &stderr,
     [pr_level_warn] = &stderr,
@@ -91,13 +93,13 @@ int pr_log(enum pr_level level, const char *format, va_list args) {
   if (pr_level_err < level && level > pr_verbosity) {
     return 0;
   }
-  FILE *output = *pr_output[level];
+  FILE *output = *outputs[level];
   if (output == NULL) {
     return 0;
   }
-  const int saved_errno = errno;
+  const int err = errno;
   int rc = vfprintf(output, format, args);
-  errno = saved_errno;
+  errno = err;
   return rc;
 }
 
@@ -113,7 +115,7 @@ int pr_log_level(enum pr_level level) {
   if (level > pr_level_max) {
     level = pr_level_max;
   }
-  return pr_logf(level, "%s: ", pr_level_names[level]);
+  return pr_logf(level, "%s: ", level_names[level]);
 }
 
 int pr_log_errno(enum pr_level level) { return errno ? pr_logf(level, "%s: ", strerror(errno)) : 0; }
