@@ -12,7 +12,7 @@ It does not take effect until you log out and log back in. After that, you shoul
 
 ## Hot Plugging
 
-The implementation takes a causiously pragmatic approach to handling the case
+The implementation takes a cautiously pragmatic approach to handling the case
 where an input device is not initially plugged in. When the program starts, it
 sets up an inotify watch on the `/dev/input` directory to monitor for new device
 files. When a new device appears, Linux will first create its corresponding
