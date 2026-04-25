@@ -783,8 +783,8 @@ static const char *const *const names[EV_MAX + 1] = {
     [EV_LED] = led,        [EV_SND] = snd, [EV_REP] = rep, [EV_SW] = sw,   [EV_FF] = ff,   [EV_FF_STATUS] = ff_status,
 };
 
-const char *typename(unsigned int type) { return type <= EV_MAX && events[type] ? events[type] : "?"; }
+const char *typename(unsigned int type) { return type <= EV_MAX && events[type] ? events[type] : NULL; }
 
 const char *codename(unsigned int type, unsigned int code) {
-  return (type <= EV_MAX && code <= maxval[type] && names[type] && names[type][code]) ? names[type][code] : "?";
+  return (type <= EV_MAX && code <= maxval[type] && names[type] && names[type][code]) ? names[type][code] : NULL;
 }
