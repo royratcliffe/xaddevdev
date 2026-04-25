@@ -1,0 +1,217 @@
+#include "epoll.h"
+#include "input_devices.h"
+#include "pr.h"
+#include "when.h"
+#include "xaddevdev.h"
+
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <linux/input.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/inotify.h>
+#include <sys/timerfd.h>
+#include <unistd.h>
+
+#define DEV_INPUT_PATH "/dev/input"
+
+static int scan_for_input_devices(const char *dirname, struct epoll *epoll);
+
+static void set_timer(time_t seconds);
+
+static int timerfd = -1;
+
+CAUSES(epoll, dev_input_epoll) {
+  if ((timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)) < 0) {
+    pr_err("Failed to create timerfd\n");
+    exit(EXIT_FAILURE);
+  }
+  if (add_epoll_event(xaddevdev_epoll(), timerfd, EPOLLIN, (epoll_data_t){.ptr = &timerfd}) < 0) {
+    pr_err("Failed to add timerfd to epoll\n");
+    exit(EXIT_FAILURE);
+  }
+  set_timer(1);
+}
+
+/*
+ * Handle epoll events for input devices. When an epoll event occurs, the
+ * handler decodes the event to determine which input device it corresponds to
+ * and what type of event occurred. The epoll event must contain a pointer to
+ * the input device associated with the event, which allows the handler to
+ * identify the specific device that triggered the event.
+ */
+CAUSES(epoll_event, dev_input_epoll_event) {
+  /*
+   * Decode the epoll event to determine which input device it corresponds to
+   * and what type of event occurred. The epoll event must contain a pointer to
+   * the input device associated with the event, which allows the handler to
+   * identify the specific device that triggered the event. By checking the
+   * event's flags (e.g., EPOLLIN), the handler can determine if there is data
+   * to read from the device, and then we can handle the event accordingly, such
+   * as reading input data or processing the event in some way.
+   *
+   * Do not assume that the event's data pointer matches an input device in the
+   * list, as the event may have been triggered by a device that has already
+   * been removed from the list, or may be some other non-related input device
+   * that is not being tracked. In such cases, the event should be ignored to
+   * prevent potential errors or undefined behaviour that could arise from
+   * attempting to access a non-existent or unrelated input device.
+   */
+  struct epoll_event *event = (struct epoll_event *)with;
+  if (!(event->events & EPOLLIN)) {
+    return;
+  }
+
+  /*
+   * If the event is triggered by the timer file descriptor, it indicates that
+   * the timer has expired; so scan the /dev/input directory for new
+   * input devices. This allows dynamic detection of input devices as they
+   * are added or removed from the system. By periodically scanning the
+   * /dev/input directory, the program remains aware of any changes to the
+   * input devices and can update our list of devices accordingly. This is
+   * particularly useful for handling hot-plugging of input devices, where
+   * devices may be added or removed while the program is running.
+   */
+  if (event->data.ptr == &timerfd) {
+    uint64_t expirations;
+    if (read(timerfd, &expirations, sizeof(expirations)) < 0) {
+      pr_err("Failed to read timerfd\n");
+      exit(EXIT_FAILURE);
+    }
+    if (scan_for_input_devices(DEV_INPUT_PATH, xaddevdev_epoll()) < 0) {
+      pr_err("Failed to scan input devices\n");
+      exit(EXIT_FAILURE);
+    }
+    return;
+  }
+
+  /*
+   * Otherwise search for the input device associated with the event. If the
+   * event's data pointer does not match any input device in the list, it
+   * indicates that the event may have been triggered by a device that has
+   * already been removed from the list, or may be some other non-related input
+   * device that is not being tracked. In such cases, the event should be
+   * ignored to prevent potential errors.
+   */
+  struct input_device *device = find_input_device_for_event(event);
+  if (device == NULL) {
+    return;
+  }
+  const char *name = input_device_name(device);
+  struct input_event input_event;
+  if (read_input_device_for_event(event, &input_event) < 0) {
+    pr_warn("Failed to read input event for device %s\n", name);
+    return;
+  }
+  pr_debug("Input event: device=%s type=%u code=%u value=%d\n", name, input_event.type, input_event.code, input_event.value);
+  OCCURS(input_event, &input_event, name);
+}
+
+/*
+ * The inotify event handler is responsible for monitoring the /dev/input
+ * directory for changes, such as the addition or removal of input devices. When
+ * an inotify event occurs, the handler checks if the event is related to a
+ * directory (ignored) or a character device (handled). For file events, it
+ * logs the details of the event, including the watch descriptor, event mask,
+ * cookie, length of the name, and the name of the file associated with the
+ * event. This allows us to track changes in the input devices and respond
+ * accordingly, such as adding new devices to the epoll instance or removing
+ * devices that are no longer present.
+ */
+CAUSES(inotify, dev_input_inotify) {
+  int inotify_fd = *(int *)with;
+  if (inotify_add_watch(inotify_fd, DEV_INPUT_PATH, (IN_DELETE | IN_CREATE | IN_ATTRIB)) < 0) {
+    pr_err("Failed to add inotify watch\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+CAUSES(inotify_event, dev_input_inotify_event) {
+  struct inotify_event *event = (struct inotify_event *)with;
+  if (event->mask & IN_ISDIR) {
+    return;
+  }
+  pr_debug("Inotify event: wd=%d mask=0x%08x cookie=%u len=%u name=%s\n", event->wd, event->mask, event->cookie, event->len, event->name);
+  if (event->mask & (IN_CREATE | IN_ATTRIB)) {
+    /*
+     * The newly-created entry in the /dev/input directory may not be an input
+     * device. In such cases, do not attempt to add the device to the list of
+     * input devices or to the epoll instance, as this could lead to errors or
+     * undefined behaviour if the device is not properly handled.
+     */
+    pr_info("Input device created or changed its attributes: %s\n", event->name);
+    set_timer(1);
+  } else if (event->mask & IN_DELETE) {
+    pr_info("Input device deleted: %s\n", event->name);
+    struct input_device *device = find_input_device(event->name);
+    if (device == NULL) {
+      return;
+    }
+    delete_epoll_event(xaddevdev_epoll(), device->fd);
+    remove_input_device(event->name);
+  }
+}
+
+static int scan_for_input_devices(const char *dirname, struct epoll *epoll) {
+  DIR *dir = opendir(dirname);
+  if (dir == NULL) {
+    pr_warn("Failed to open directory %s\n", dirname);
+    return -EAGAIN;
+  }
+  for (struct dirent *entry; (entry = readdir(dir)) != NULL;) {
+    if (entry->d_type != DT_CHR) {
+      continue;
+    }
+    struct input_device *input_device = find_input_device(entry->d_name);
+    if (input_device != NULL) {
+      continue;
+    }
+
+    /*
+     * The following fails if the device is already opened by another process
+     * without O_NONBLOCK, but this is a common scenario for input devices, and
+     * we can handle it by simply skipping the device.
+     *
+     * The following fails without permissions. The process needs to possess
+     * read permissions for the device, which is typically granted to users in
+     * the "input" group. If the process does not have the necessary
+     * permissions, it will fail to open the device; in which case, handle it by
+     * simply skipping the device.
+     */
+    int fd = openat(dirfd(dir), entry->d_name, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) {
+      pr_warn("Failed to open input device %s\n", entry->d_name);
+      continue;
+    }
+    if ((input_device = add_input_device(entry->d_name, fd)) == NULL) {
+      pr_warn("Failed to add input device %s\n", entry->d_name);
+      (void)close(fd);
+      continue;
+    }
+    if (add_epoll_event(epoll, fd, EPOLLIN, (epoll_data_t){.ptr = input_device}) < 0) {
+      pr_warn("Failed to add epoll event for device %s\n", entry->d_name);
+      remove_input_device(entry->d_name);
+      continue;
+    }
+    pr_info("Added input device: %s\n", entry->d_name);
+  }
+  if (closedir(dir) < 0) {
+    pr_err("Failed to close directory %s\n", dirname);
+    return -EIO;
+  }
+  return 0;
+}
+
+static void set_timer(time_t seconds) {
+  if (timerfd_settime(timerfd, 0,
+                      &(struct itimerspec){
+                          .it_value = {.tv_sec = seconds, .tv_nsec = 0},
+                          .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+                      },
+                      NULL) < 0) {
+    pr_err("Failed to set timerfd\n");
+    exit(EXIT_FAILURE);
+  }
+}
