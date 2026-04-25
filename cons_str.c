@@ -9,7 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static bool strcmp_p(struct cons **, struct cons *cell, void *user) { return strcmp((const char *)cons_car(cell), (const char *)user) == 0; }
+static bool strcmp_p(struct cons **, struct cons *cell, void *user) { return strcmp(cons_str_car(cell), (const char *)user) == 0; }
+
+const char *cons_str_car(const struct cons *cell) { return (const char *)cons_car(cell); }
 
 struct cons **cons_find_str(struct cons **list, const char *str) { return cons_loop(list, strcmp_p, (void *)str); }
 
@@ -28,7 +30,7 @@ struct cons *cons_remove_str(struct cons **list, const char *str) {
     return CONS_NIL;
   }
   struct cons *removed = *found;
-  free((void *)cons_car(removed));
+  free(cons_car(removed));
   *found = cons_cdr(removed);
   return removed;
 }

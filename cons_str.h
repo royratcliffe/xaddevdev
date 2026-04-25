@@ -15,6 +15,15 @@
 #include <cons.h>
 
 /*!
+ * \brief Accessor for the \c car field of a cons cell, returning it as a string.
+ * \param cell The cons cell to access.
+ * \return The string stored in the \c car field of the cons cell.
+ * \details This function retrieves the value stored in the \c car field of the
+ * given cons cell and returns it as a pointer to a character string.
+ */
+const char *cons_str_car(const struct cons *cell);
+
+/*!
  * \brief Finds the first cons cell in a list whose \c car field matches the
  * specified string.
  * \param list Pointer to the list head to search through.
