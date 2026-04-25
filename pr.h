@@ -34,22 +34,31 @@
  * designed to write log messages to a log file instead of standard output or
  * standard error, depending on the requirements of the project and the desired
  * logging behaviour.
+ *
+ * Only error and warning messages will include the standard error message
+ * corresponding to the current value of errno, if errno is non-zero.
+ * Informational and debug messages will not include the standard error message,
+ * as they are typically used for general information and debugging purposes,
+ * where the standard error message may not be relevant or necessary.
+ *
  * \param level The log level at which to log the message.
  * \param format The printf-style format string for the log message.
  * \param args The variable argument list containing the values to be formatted
  * into the log message.
  * \return The number of characters written to the log output, or a negative
  * value if an error occurs.
- * \note The implementation of this function should ensure that the original
- * value of errno is preserved, as logging operations may modify errno. By
- * saving and restoring errno, we maintain the integrity of error handling in
- * the program and prevent unintended side effects from the logging operations.
+ * \note The implementation of this function ensures that the original value of
+ * errno is preserved, as logging operations may modify errno. By saving and
+ * restoring errno, it maintains the integrity of error handling in the program
+ * and prevents unintended side effects from the logging operations.
  */
 #define pr(level, ...)                              \
   do {                                              \
     if (pr_logging(pr_level_##level)) {             \
       (void)pr_log_level(pr_level_##level);         \
-      (void)pr_log_errno(pr_level_##level);         \
+      if (pr_level_##level <= pr_level_warn) {      \
+        (void)pr_log_errno(pr_level_##level);       \
+      }                                             \
       (void)pr_logf(pr_level_##level, __VA_ARGS__); \
     }                                               \
   } while (0)
