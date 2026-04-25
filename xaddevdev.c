@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+
 #include "xaddevdev.h"
 #include "epoll.h"
 #include "pr.h"
