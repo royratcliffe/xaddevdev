@@ -136,12 +136,31 @@ int pr_logf(enum pr_level level, const char *format, ...);
 int pr_log_level(enum pr_level level);
 
 /*!
- * \brief
+ * \brief Logs the standard error message corresponding to the current value of
+ * errno, if errno is non-zero.
+ * \details This function checks the current value of errno, and if it is
+ * non-zero, it logs the corresponding error message (e.g., "No such file or
+ * directory") to the appropriate output stream based on the log level. If errno
+ * is zero, indicating that there is no error to report, the function simply
+ * returns without logging anything.
+ * \param level The log level at which to log the error message.
+ * \return The number of characters written to the log output, or 0 if errno is
+ * zero (indicating no error).
  */
 int pr_log_errno(enum pr_level level);
 
 /*!
- * \brief
+ * \brief Set the verbosity level for logging.
+ * \details This function sets the global verbosity level for logging, which
+ * controls which log messages will be output based on their log level. By
+ * setting the verbosity level, developers can control the amount of logging
+ * output, allowing for more detailed logging during development and debugging,
+ * or less detailed logging in production environments. The verbosity level can
+ * be set to a specific value, or it can be incremented or decremented using the
+ * pr_verbosity_inc and pr_verbosity_dec functions, respectively, to adjust the
+ * logging verbosity dynamically at runtime.
+ * \param verbosity The verbosity level to set (e.g., 0 for error only, 1 for
+ * warning, 2 for info, 3 for debug).
  */
 void pr_verbosity_set(int verbosity);
 
