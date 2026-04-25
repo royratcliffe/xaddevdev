@@ -19,7 +19,7 @@
 int create_epoll(struct epoll *epoll, int maxevents) {
   const int fd = epoll_create1(0);
   if (fd < 0) {
-    return -errno;
+    return -1;
   }
   epoll->events = malloc(sizeof(struct epoll_event) * maxevents);
   if (epoll->events == NULL) {
@@ -28,9 +28,10 @@ int create_epoll(struct epoll *epoll, int maxevents) {
      * modify errno. Return the malloc() error code to the caller to indicate
      * the failure, allowing it to handle the error appropriately.
      */
-    int rc = -errno;
+    const int err = errno;
     (void)close(fd);
-    return rc;
+    errno = err;
+    return -2;
   }
   epoll->fd = fd;
   epoll->maxevents = maxevents;
@@ -41,36 +42,29 @@ int add_epoll_event(struct epoll *epoll, int fd, uint32_t events, epoll_data_t d
   struct epoll_event event;
   event.events = events;
   event.data = data;
-  int rc = epoll_ctl(epoll->fd, EPOLL_CTL_ADD, fd, &event);
-  return rc < 0 ? -errno : rc;
+  return epoll_ctl(epoll->fd, EPOLL_CTL_ADD, fd, &event);
 }
 
 int modify_epoll_event(struct epoll *epoll, int fd, uint32_t events, epoll_data_t data) {
   struct epoll_event event;
   event.events = events;
   event.data = data;
-  int rc = epoll_ctl(epoll->fd, EPOLL_CTL_MOD, fd, &event);
-  return rc < 0 ? -errno : rc;
+  return epoll_ctl(epoll->fd, EPOLL_CTL_MOD, fd, &event);
 }
 
-int delete_epoll_event(struct epoll *epoll, int fd) {
-  int rc = epoll_ctl(epoll->fd, EPOLL_CTL_DEL, fd, NULL);
-  return rc < 0 ? -errno : rc;
-}
+int delete_epoll_event(struct epoll *epoll, int fd) { return epoll_ctl(epoll->fd, EPOLL_CTL_DEL, fd, NULL); }
 
-int wait_for_epoll_events(struct epoll *epoll, int timeout) {
-  int rc = epoll_wait(epoll->fd, epoll->events, epoll->maxevents, timeout);
-  return rc < 0 ? -errno : rc;
-}
+int wait_for_epoll_events(struct epoll *epoll, int timeout) { return epoll_wait(epoll->fd, epoll->events, epoll->maxevents, timeout); }
 
 int close_epoll(struct epoll *epoll) {
   int rc = 0;
   if (epoll->fd >= 0) {
-    if (close(epoll->fd) < 0) {
-      rc = -errno;
-    }
+    rc = close(epoll->fd);
     epoll->fd = -1;
   }
+  /*
+   * Freeing NULL is safe and has no effect.
+   */
   free(epoll->events);
   epoll->events = NULL;
   return rc;
