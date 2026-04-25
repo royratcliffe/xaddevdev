@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     }
   }
   if (optind < argc) {
-    pr_err("Unexpected non-option argument: %s\n", argv[optind]);
+    pr_warn("Unexpected non-option argument: %s\n", argv[optind]);
     return EXIT_FAILURE;
   }
   int rc = create_epoll(&epoll, 10);
