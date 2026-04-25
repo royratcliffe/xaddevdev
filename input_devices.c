@@ -21,10 +21,10 @@
 
 #include <errno.h>
 #include <linux/input.h>
-#include <sys/inotify.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/inotify.h>
+#include <unistd.h>
 
 static struct cons *input_devices = CONS_NIL;
 
@@ -48,7 +48,7 @@ struct input_device *add_input_device(const char *name, int fd) {
     return NULL;
   }
   device->fd = fd;
-  device->name = dup_evioc_name(fd);
+  device->lazy_name = dup_evioc_name(fd);
   /*
    * Ignore input devices that do not have a name, as they cannot be identified.
    * In this case, free the allocated memory for the device structure and return
@@ -56,17 +56,19 @@ struct input_device *add_input_device(const char *name, int fd) {
    * "valid" input devices with identifiable names are managed in the list of
    * input devices.
    */
-  if (device->name == NULL) {
+  if (device->lazy_name == NULL) {
     free(device);
     return NULL;
   }
   if (cons_str(&input_devices, &device->cons, name) == NULL) {
-    free(device->name);
+    free(device->lazy_name);
     free(device);
     return NULL;
   }
   return device;
 }
+
+const char *input_device_name(const struct input_device *device) { return device->lazy_name != NULL ? device->lazy_name : cons_str_car(&device->cons); }
 
 int remove_input_device(const char *name) {
   struct cons *cell = cons_remove_str(&input_devices, name);
@@ -81,12 +83,13 @@ int remove_input_device(const char *name) {
    * descriptors, ensuring that they are properly closed when an input device is
    * removed from the list.
    */
+  int rc = 0;
   if (device->fd >= 0) {
-    (void)close(device->fd);
+    rc = close(device->fd);
   }
-  free(device->name);
+  free(device->lazy_name);
   free(device);
-  return 0;
+  return rc;
 }
 
 struct input_device *find_input_device_for_event(const struct epoll_event *event) {
