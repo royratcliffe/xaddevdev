@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+
 /*!
  * \file cons_str.c
  * \brief Implementation of string-based cons cell operations.

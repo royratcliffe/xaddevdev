@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+
 /*!
  * \file cons_str.h
  * \brief Header file for string-based cons cell operations.
