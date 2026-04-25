@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <getopt.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 static struct epoll epoll = {.fd = -1};
@@ -30,7 +31,7 @@ int main(int argc, char *argv[]) {
       OCCURS(long_opt, longopts + longind, optarg);
       break;
     case 'V':
-      pr_info("xaddevdev version %s\n", VERSION);
+      (void)fprintf(stderr, "xaddevdev version %s\n", VERSION);
       return EXIT_SUCCESS;
     case 'v':
       pr_verbosity_inc();
@@ -42,21 +43,21 @@ int main(int argc, char *argv[]) {
       OCCURS(opt_p, optarg);
       break;
     case '?':
-      pr_info("Usage: %s [OPTIONS]\n", argv[0]);
-      pr_info("Options:\n");
-      pr_info("  -V, --version          Show version information and exit\n");
-      pr_info("  -v, --verbose          Increase verbosity level\n");
-      pr_info("  -h, --host=HOST        Connect to Redis server at HOST\n");
-      pr_info("  -p, --port=PORT        Connect to Redis server at PORT\n");
-      pr_info("  -?, --help             Show this help message and exit\n");
+      (void)fprintf(stderr, "Usage: %s [OPTIONS]\n", argv[0]);
+      (void)fprintf(stderr, "Options:\n");
+      (void)fprintf(stderr, "  -V, --version          Show version information and exit\n");
+      (void)fprintf(stderr, "  -v, --verbose          Increase verbosity level\n");
+      (void)fprintf(stderr, "  -h, --host=HOST        Connect to Redis server at HOST\n");
+      (void)fprintf(stderr, "  -p, --port=PORT        Connect to Redis server at PORT\n");
+      (void)fprintf(stderr, "  -?, --help             Show this help message and exit\n");
       return EXIT_SUCCESS;
     default:
-      pr_warn("Unknown option: 0%o\n", c);
+      (void)fprintf(stderr, "Unknown option: 0%o\n", c);
       return EXIT_FAILURE;
     }
   }
   if (optind < argc) {
-    pr_warn("Unexpected non-option argument: %s\n", argv[optind]);
+    (void)fprintf(stderr, "Unexpected non-option argument: %s\n", argv[optind]);
     return EXIT_FAILURE;
   }
   int rc = create_epoll(&epoll, 10);
