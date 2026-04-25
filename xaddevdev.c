@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
       pr_info("xaddevdev version %s\n", VERSION);
       return EXIT_SUCCESS;
     case 'v':
-      pr_verbosity++;
+      pr_verbosity_inc();
       break;
     case 'h':
       OCCURS(opt_h, optarg);
@@ -59,8 +59,8 @@ int main(int argc, char *argv[]) {
   }
   int rc = create_epoll(&epoll, 10);
   if (rc < 0) {
-    pr_err("Failed to create epoll instance: %d (%s)\n", -rc, strerror(-rc));
-    return -rc;
+    pr_err("Failed to create epoll instance");
+    return EXIT_FAILURE;
   }
   OCCURS(epoll, &epoll);
 
@@ -81,8 +81,8 @@ int main(int argc, char *argv[]) {
     }
   }
   if (rc < 0) {
-    pr_err("Error waiting for epoll events: %d (%s)\n", -rc, strerror(-rc));
-    return -rc;
+    pr_err("Error waiting for epoll events\n");
+    return EXIT_FAILURE;
   }
 
   close_epoll(&epoll);
