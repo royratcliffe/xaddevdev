@@ -9,6 +9,11 @@
 #include <linux/input.h>
 #include <sys/inotify.h>
 #include <sys/timerfd.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <stdio.h>
 
 #define DEV_INPUT_PATH "/dev/input"
 
