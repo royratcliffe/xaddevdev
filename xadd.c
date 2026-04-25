@@ -5,6 +5,7 @@
 #include <hiredis.h>
 #include <linux/input.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 static redisOptions options = {
     .type = REDIS_CONN_TCP,
