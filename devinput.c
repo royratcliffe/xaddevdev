@@ -107,7 +107,7 @@ CAUSES(epoll_event, devinput_epoll_event) {
 CAUSES(inotify, devinput_inotify) {
   int inotify_fd = *(int *)with;
   if (inotify_add_watch(inotify_fd, DEV_INPUT_PATH, (IN_DELETE | IN_CREATE | IN_ATTRIB)) < 0) {
-    pr_err("Failed to add inotify watch: %d (%s)\n", errno, strerror(errno));
+    pr_err("Failed to add inotify watch\n");
     exit(EXIT_FAILURE);
   }
 }
