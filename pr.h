@@ -108,6 +108,26 @@ bool pr_logging(enum pr_level level);
  * \param args The variable argument list containing the values to be formatted.
  * \return The number of characters written to the log output, or a negative
  * value if an error occurs.
+ * \note The logging function does \e not provide a terminating newline
+ * character at the end of the log message, as this allows for more flexible
+ * logging behaviour. By not automatically appending a newline, the logging
+ * function allows developers to control the formatting of log messages more
+ * precisely, enabling them to create multi-line log entries or to format log
+ * messages in a specific way without being constrained by an automatic newline.
+ * This design choice can be particularly useful when logging complex data
+ * structures or when integrating with other logging systems that may have their
+ * own formatting requirements. Developers can choose to include a newline
+ * character in the format string if they want each log message to be on a
+ * separate line, or they can omit it if they want to continue logging on the
+ * same line or if they want to format the output in a custom way.
+ * \note The implementation saves the current value of errno at the beginning of
+ * the function and restores it before returning. This is important because the
+ * logging function may perform operations that could modify errno (e.g., file
+ * I/O), and we want to ensure that the original errno value is preserved for
+ * the caller, allowing it to correctly handle any errors that may have occurred
+ * before the logging function was called. By saving and restoring errno, we
+ * maintain the integrity of error handling in the program and prevent
+ * unintended side effects from the logging operations.
  */
 int pr_log(enum pr_level level, const char *format, va_list args);
 
