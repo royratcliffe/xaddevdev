@@ -33,5 +33,5 @@ int inotify_events_occur(int fd) {
    * read, which is expected. Any other error indicates a problem with reading
    * from the inotify file descriptor; return an error code accordingly.
    */
-  return length < 0 && errno != EAGAIN ? -errno : 0;
+  return length < 0 && errno != EAGAIN ? -EIO : 0;
 }
