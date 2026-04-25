@@ -17,26 +17,22 @@
 
 #define DEV_INPUT_PATH "/dev/input"
 
-static int scan_input_devices(const char *dirname, struct epoll *epoll);
+static int scan_for_input_devices(const char *dirname, struct epoll *epoll);
 
-static int timer_fd = -1;
+static void set_timer(time_t seconds);
 
-CAUSES(epoll, devinput_epoll) {
-  timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
-  if (timer_fd < 0) {
+static int timerfd = -1;
+
+CAUSES(epoll, dev_input_epoll) {
+  if ((timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC)) < 0) {
     pr_err("Failed to create timerfd\n");
     exit(EXIT_FAILURE);
   }
-  if (add_epoll_event(xaddevdev_epoll(), timer_fd, EPOLLIN, (epoll_data_t){.ptr = &timer_fd}) < 0) {
-    pr_err("Failed to add timerfd to epoll\n", errno, strerror(errno));
+  if (add_epoll_event(xaddevdev_epoll(), timerfd, EPOLLIN, (epoll_data_t){.ptr = &timerfd}) < 0) {
+    pr_err("Failed to add timerfd to epoll\n");
     exit(EXIT_FAILURE);
   }
-  pr_info("Directory: %s\n", DEV_INPUT_PATH);
-  int rc = scan_input_devices(DEV_INPUT_PATH, xaddevdev_epoll());
-  if (rc < 0) {
-    pr_err("Failed to scan input devices: %d (%s)\n", -rc, strerror(-rc));
-    exit(-rc);
-  }
+  set_timer(1);
 }
 
 /*
@@ -46,7 +42,7 @@ CAUSES(epoll, devinput_epoll) {
  * the input device associated with the event, which allows the handler to
  * identify the specific device that triggered the event.
  */
-CAUSES(epoll_event, devinput_epoll_event) {
+CAUSES(epoll_event, dev_input_epoll_event) {
   /*
    * Decode the epoll event to determine which input device it corresponds to
    * and what type of event occurred. The epoll event must contain a pointer to
@@ -68,28 +64,47 @@ CAUSES(epoll_event, devinput_epoll_event) {
     return;
   }
 
-  if (event->data.ptr == &timer_fd) {
+  /*
+   * If the event is triggered by the timer file descriptor, it indicates that
+   * the timer has expired; so scan the /dev/input directory for new
+   * input devices. This allows dynamic detection of input devices as they
+   * are added or removed from the system. By periodically scanning the
+   * /dev/input directory, the program remains aware of any changes to the
+   * input devices and can update our list of devices accordingly. This is
+   * particularly useful for handling hot-plugging of input devices, where
+   * devices may be added or removed while the program is running.
+   */
+  if (event->data.ptr == &timerfd) {
     uint64_t expirations;
-    ssize_t s = read(timer_fd, &expirations, sizeof(expirations));
-    if (s < 0) {
+    if (read(timerfd, &expirations, sizeof(expirations)) < 0) {
       pr_err("Failed to read timerfd\n");
       exit(EXIT_FAILURE);
     }
-    (void)scan_input_devices(DEV_INPUT_PATH, xaddevdev_epoll());
+    if (scan_for_input_devices(DEV_INPUT_PATH, xaddevdev_epoll()) < 0) {
+      pr_err("Failed to scan input devices\n");
+      exit(EXIT_FAILURE);
+    }
     return;
   }
 
+  /*
+   * Otherwise search for the input device associated with the event. If the
+   * event's data pointer does not match any input device in the list, it
+   * indicates that the event may have been triggered by a device that has
+   * already been removed from the list, or may be some other non-related input
+   * device that is not being tracked. In such cases, the event should be
+   * ignored to prevent potential errors.
+   */
   struct input_device *device = find_input_device_for_event(event);
   if (device == NULL) {
     return;
   }
+  const char *name = input_device_name(device);
   struct input_event input_event;
-  int rc = read_input_device_for_event(event, &input_event);
-  if (rc < 0) {
-    pr_warn("Failed to read input event for device %s\n", device->lazy_name);
+  if (read_input_device_for_event(event, &input_event) < 0) {
+    pr_warn("Failed to read input event for device %s\n", name);
     return;
   }
-  const char *name = input_device_name(device);
   pr_info("Input event: device=%s type=%u code=%u value=%d\n", name, input_event.type, input_event.code, input_event.value);
   OCCURS(input_event, &input_event, name);
 }
@@ -105,7 +120,7 @@ CAUSES(epoll_event, devinput_epoll_event) {
  * accordingly, such as adding new devices to the epoll instance or removing
  * devices that are no longer present.
  */
-CAUSES(inotify, devinput_inotify) {
+CAUSES(inotify, dev_input_inotify) {
   int inotify_fd = *(int *)with;
   if (inotify_add_watch(inotify_fd, DEV_INPUT_PATH, (IN_DELETE | IN_CREATE | IN_ATTRIB)) < 0) {
     pr_err("Failed to add inotify watch\n");
@@ -113,7 +128,7 @@ CAUSES(inotify, devinput_inotify) {
   }
 }
 
-CAUSES(inotify_event, devinput_inotify_event) {
+CAUSES(inotify_event, dev_input_inotify_event) {
   struct inotify_event *event = (struct inotify_event *)with;
   if (event->mask & IN_ISDIR) {
     return;
@@ -127,15 +142,7 @@ CAUSES(inotify_event, devinput_inotify_event) {
      * undefined behaviour if the device is not properly handled.
      */
     pr_info("Input device created or changed its attributes: %s\n", event->name);
-    if (timerfd_settime(timer_fd, 0,
-                        &(struct itimerspec){
-                            .it_value = {.tv_sec = 1, .tv_nsec = 0},
-                            .it_interval = {.tv_sec = 0, .tv_nsec = 0},
-                        },
-                        NULL) < 0) {
-      pr_err("Failed to set timerfd\n");
-      exit(EXIT_FAILURE);
-    }
+    set_timer(1);
   } else if (event->mask & IN_DELETE) {
     pr_info("Input device deleted: %s\n", event->name);
     struct input_device *device = find_input_device(event->name);
@@ -147,10 +154,10 @@ CAUSES(inotify_event, devinput_inotify_event) {
   }
 }
 
-int scan_input_devices(const char *dirname, struct epoll *epoll) {
+static int scan_for_input_devices(const char *dirname, struct epoll *epoll) {
   DIR *dir = opendir(dirname);
   if (dir == NULL) {
-    pr_err("Failed to open directory %s\n", dirname);
+    pr_warn("Failed to open directory %s\n", dirname);
     return -EAGAIN;
   }
   for (struct dirent *entry; (entry = readdir(dir)) != NULL;) {
@@ -195,4 +202,16 @@ int scan_input_devices(const char *dirname, struct epoll *epoll) {
     return -EIO;
   }
   return 0;
+}
+
+static void set_timer(time_t seconds) {
+  if (timerfd_settime(timerfd, 0,
+                      &(struct itimerspec){
+                          .it_value = {.tv_sec = seconds, .tv_nsec = 0},
+                          .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+                      },
+                      NULL) < 0) {
+    pr_err("Failed to set timerfd\n");
+    exit(EXIT_FAILURE);
+  }
 }
