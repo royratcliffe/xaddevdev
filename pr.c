@@ -1,1 +1,109 @@
+/*!
+ * \file pr.c
+ * \details Implementation of the pr logging functions. The pr functions provide
+ * a simple logging mechanism that can be used throughout the program to log
+ * messages at different verbosity levels. The pr_verbosity variable controls
+ * the verbosity level of the logging, allowing for more or less detailed output
+ * based on the needs of the developer. The pr functions can be used to log
+ * informational messages, debug messages, warnings, and errors, providing a
+ * consistent and flexible way to output log messages throughout the program.
+ * The implementation of the pr functions can be designed to write log messages
+ * to standard output, standard error, or to a log file, depending on the
+ * requirements of the project and the desired logging behaviour.
+ */
+#include "pr.h"
+
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+
 int pr_verbosity = 0;
+
+static const char *const pr_level_names[] = {
+    [0 ... pr_level_max] = "UNK", [pr_level_err] = "ERR",     [pr_level_warn] = "WARN",
+    [pr_level_info] = "INFO",     [pr_level_debug] = "DEBUG", [pr_level_max] = "MAX",
+};
+
+static FILE *const *pr_output[] = {
+    [0 ... pr_level_max] = &stdout,
+    [pr_level_err] = &stderr,
+    [pr_level_warn] = &stderr,
+};
+
+bool pr_logging(enum pr_level level) { return pr_level_err >= level || level <= pr_verbosity; }
+
+/*!
+ * \note The logging function does \e not provide a terminating newline
+ * character at the end of the log message, as this allows for more flexible
+ * logging behaviour. By not automatically appending a newline, the logging
+ * function allows developers to control the formatting of log messages more
+ * precisely, enabling them to create multi-line log entries or to format log
+ * messages in a specific way without being constrained by an automatic newline.
+ * This design choice can be particularly useful when logging complex data
+ * structures or when integrating with other logging systems that may have their
+ * own formatting requirements. Developers can choose to include a newline
+ * character in the format string if they want each log message to be on a
+ * separate line, or they can omit it if they want to continue logging on the
+ * same line or if they want to format the output in a custom way.
+ * \note The implementation saves the current value of errno at the beginning of
+ * the function and restores it before returning. This is important because the
+ * logging function may perform operations that could modify errno (e.g., file
+ * I/O), and we want to ensure that the original errno value is preserved for
+ * the caller, allowing it to correctly handle any errors that may have occurred
+ * before the logging function was called. By saving and restoring errno, we
+ * maintain the integrity of error handling in the program and prevent
+ * unintended side effects from the logging operations.
+ */
+int pr_log(enum pr_level level, const char *format, va_list args) {
+  /*
+   * Elide the log message if the specified level is greater than the current
+   * verbosity level, as this allows for more efficient logging by avoiding
+   * unnecessary formatting and output operations when the log message would not
+   * be displayed due to the verbosity level.
+   *
+   * Never elide error messages, as they are critical for diagnosing issues and
+   * should always be logged regardless of the verbosity level.
+   */
+  if (pr_level_err < level && level > pr_verbosity) {
+    return 0;
+  }
+  FILE *output = *pr_output[level];
+  if (output == NULL) {
+    return 0;
+  }
+  const int saved_errno = errno;
+  int rc = vfprintf(output, format, args);
+  errno = saved_errno;
+  return rc;
+}
+
+int pr_logf(enum pr_level level, const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  int rc = pr_log(level, format, args);
+  va_end(args);
+  return rc;
+}
+
+int pr_log_level(enum pr_level level) {
+  if (level > pr_level_max) {
+    level = pr_level_max;
+  }
+  return pr_logf(level, "%s: ", pr_level_names[level]);
+}
+
+int pr_log_errno(enum pr_level level) { return errno ? pr_logf(level, "%s: ", strerror(errno)) : 0; }
+
+void pr_verbosity_set(int verbosity) { pr_verbosity = verbosity; }
+
+void pr_verbosity_inc(void) {
+  if (pr_verbosity < pr_level_max) {
+    pr_verbosity++;
+  }
+}
+
+void pr_verbosity_dec(void) {
+  if (pr_verbosity > 0) {
+    pr_verbosity--;
+  }
+}
