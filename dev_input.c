@@ -105,7 +105,7 @@ CAUSES(epoll_event, dev_input_epoll_event) {
     pr_warn("Failed to read input event for device %s\n", name);
     return;
   }
-  pr_info("Input event: device=%s type=%u code=%u value=%d\n", name, input_event.type, input_event.code, input_event.value);
+  pr_debug("Input event: device=%s type=%u code=%u value=%d\n", name, input_event.type, input_event.code, input_event.value);
   OCCURS(input_event, &input_event, name);
 }
 
