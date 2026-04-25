@@ -10,7 +10,7 @@ configure_file(
 add_executable(xaddevdev
     xaddevdev.c
     xadd.c
-    devinput.c
+    dev_input.c
     input_devices.c
     names.c
     evioc.c
