@@ -105,9 +105,9 @@ CAUSES(input_event, xadd_input_event) {
    * Convert the input event type and code to their corresponding names using
    * the typename() and codename() functions. The typename() function takes an
    * input event type as an argument and returns the name of the type as a
-   * string, or "?" if the type is unknown. The codename() function takes an
+   * string, or NULL if the type is unknown. The codename() function takes an
    * input event type and code as arguments and returns the name of the code as
-   * a string, or "?" if the code is unknown.
+   * a string, or NULL if the code is unknown.
    *
    * Include the human-readable names of the input event type and code in the
    * Redis stream entry, which provide more context and make it easier to
@@ -119,16 +119,22 @@ CAUSES(input_event, xadd_input_event) {
    * into user interactions and device behaviour.
    */
   const char *type = typename(input_event->type);
+  if (type == NULL) {
+    return;
+  }
   const char *code = codename(input_event->type, input_event->code);
+  if (code == NULL) {
+    return;
+  }
   redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u typename %s code %u codename %s value %d",
-                                   /* minimum ID: */ min_id,
-                                   /* device name: */ name,
-                                   /* timestamp in milliseconds: */ time,
-                                   /* type as an integer: */ input_event->type,
-                                   /* name of the type or "?" if unknown: */ type,
-                                   /* code as an integer: */ input_event->code,
-                                   /* name of the code or "?" if unknown: */ code,
-                                   /* value: */ input_event->value);
+                                   /* minimum ID */ min_id,
+                                   /* device name */ name,
+                                   /* timestamp in milliseconds */ time,
+                                   /* type as an integer */ input_event->type,
+                                   /* name of the type */ type,
+                                   /* code as an integer */ input_event->code,
+                                   /* name of the code */ code,
+                                   /* value */ input_event->value);
   if (reply == NULL) {
     pr_err("Failed to add input event to Redis: %s\n", redis->errstr);
     return;
@@ -149,11 +155,11 @@ CAUSES(input_event, xadd_input_event) {
   }
   freeReplyObject(reply);
   pr_info("Input event: device=%s time=%lld type=%u typename=%s code=%u codename=%s value=%d\n",
-          /* device name: */ name,
-          /* timestamp in milliseconds: */ time,
-          /* type as an integer: */ input_event->type,
-          /* name of the type or "?" if unknown: */ type,
-          /* code as an integer: */ input_event->code,
-          /* name of the code or "?" if unknown: */ code,
-          /* value: */ input_event->value);
+          /* device name */ name,
+          /* timestamp in milliseconds */ time,
+          /* type as an integer */ input_event->type,
+          /* name of the type */ type,
+          /* code as an integer */ input_event->code,
+          /* name of the code */ code,
+          /* value */ input_event->value);
 }
