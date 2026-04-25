@@ -23,6 +23,8 @@
 #include <linux/input.h>
 #include <sys/inotify.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 static struct cons *input_devices = CONS_NIL;
 
@@ -102,7 +104,7 @@ int read_input_device_for_event(const struct epoll_event *event, struct input_ev
   }
   ssize_t bytes_read = read(device->fd, input_event, sizeof(*input_event));
   if (bytes_read < 0) {
-    return -errno;
+    return -EIO;
   }
   return 0;
 }
