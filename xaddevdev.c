@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
    * epoll_wait returns a positive number, it indicates the number of file
    * descriptors that are ready for the requested I/O.
    */
-  while ((rc = wait_for_epoll_events(&epoll, 1000)) >= 0 || rc == -EINTR) {
+  while ((rc = wait_for_epoll_events(&epoll, 1000)) >= 0 || errno == EINTR) {
     for (int i = 0; i < rc; i++) {
       OCCURS(epoll_event, epoll.events + i);
     }
