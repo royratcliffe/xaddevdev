@@ -5,15 +5,15 @@
 #include "xaddevdev.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/input.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/inotify.h>
 #include <sys/timerfd.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
-#include <string.h>
-#include <stdio.h>
 
 #define DEV_INPUT_PATH "/dev/input"
 
@@ -86,11 +86,12 @@ CAUSES(epoll_event, devinput_epoll_event) {
   struct input_event input_event;
   int rc = read_input_device_for_event(event, &input_event);
   if (rc < 0) {
-    pr_warn("Failed to read input event for device %s: %d (%s)\n", device->name, -rc, strerror(-rc));
+    pr_warn("Failed to read input event for device %s\n", device->lazy_name);
     return;
   }
-  // pr_info("Input event: device=%s type=%u code=%u value=%d\n", device->name, input_event.type, input_event.code, input_event.value);
-  OCCURS(input_event, &input_event, device->name);
+  const char *name = input_device_name(device);
+  pr_info("Input event: device=%s type=%u code=%u value=%d\n", name, input_event.type, input_event.code, input_event.value);
+  OCCURS(input_event, &input_event, name);
 }
 
 /*
@@ -146,8 +147,8 @@ CAUSES(inotify_event, devinput_inotify_event) {
 int scan_input_devices(const char *dirname, struct epoll *epoll) {
   DIR *dir = opendir(dirname);
   if (dir == NULL) {
-    pr_err("Failed to open directory %s: %d (%s)\n", dirname, errno, strerror(errno));
-    exit(EXIT_FAILURE);
+    pr_err("Failed to open directory %s\n", dirname);
+    return -EAGAIN;
   }
   for (struct dirent *entry; (entry = readdir(dir)) != NULL;) {
     if (entry->d_type != DT_CHR) {
@@ -157,9 +158,8 @@ int scan_input_devices(const char *dirname, struct epoll *epoll) {
     if (input_device != NULL) {
       continue;
     }
+
     /*
-     * O_NONBLOCK | O_CLOEXEC
-     *
      * The following fails if the device is already opened by another process
      * without O_NONBLOCK, but this is a common scenario for input devices, and
      * we can handle it by simply skipping the device.
@@ -172,24 +172,24 @@ int scan_input_devices(const char *dirname, struct epoll *epoll) {
      */
     int fd = openat(dirfd(dir), entry->d_name, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
     if (fd < 0) {
-      pr_info("Failed to open input device %s/%s: %d (%s)\n", dirname, entry->d_name, errno, strerror(errno));
+      pr_warn("Failed to open input device %s\n", entry->d_name);
       continue;
     }
-
     if ((input_device = add_input_device(entry->d_name, fd)) == NULL) {
-      pr_warn("Failed to add input device %s: %d (%s)\n", entry->d_name, errno, strerror(errno));
+      pr_warn("Failed to add input device %s\n", entry->d_name);
       (void)close(fd);
       continue;
     }
-    pr_info("Entry: %s\n", entry->d_name);
-
     if (add_epoll_event(epoll, fd, EPOLLIN, (epoll_data_t){.ptr = input_device}) < 0) {
-      pr_warn("Failed to add epoll event for device %s/%s: %d (%s)\n", dirname, entry->d_name, errno, strerror(errno));
+      pr_warn("Failed to add epoll event for device %s\n", entry->d_name);
       remove_input_device(entry->d_name);
       continue;
     }
-    pr_info("Input device name: %s\n", entry->d_name);
+    pr_info("Added input device: %s\n", entry->d_name);
   }
-  closedir(dir);
+  if (closedir(dir) < 0) {
+    pr_err("Failed to close directory %s\n", dirname);
+    return -EIO;
+  }
   return 0;
 }
