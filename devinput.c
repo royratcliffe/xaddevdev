@@ -24,11 +24,11 @@ static int timer_fd = -1;
 CAUSES(epoll, devinput_epoll) {
   timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
   if (timer_fd < 0) {
-    pr_err("Failed to create timerfd: %d (%s)\n", errno, strerror(errno));
+    pr_err("Failed to create timerfd\n");
     exit(EXIT_FAILURE);
   }
   if (add_epoll_event(xaddevdev_epoll(), timer_fd, EPOLLIN, (epoll_data_t){.ptr = &timer_fd}) < 0) {
-    pr_err("Failed to add timerfd to epoll: %d (%s)\n", errno, strerror(errno));
+    pr_err("Failed to add timerfd to epoll\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
   }
   pr_info("Directory: %s\n", DEV_INPUT_PATH);
@@ -72,7 +72,7 @@ CAUSES(epoll_event, devinput_epoll_event) {
     uint64_t expirations;
     ssize_t s = read(timer_fd, &expirations, sizeof(expirations));
     if (s < 0) {
-      pr_err("Failed to read timerfd: %d (%s)\n", errno, strerror(errno));
+      pr_err("Failed to read timerfd\n");
       exit(EXIT_FAILURE);
     }
     (void)scan_input_devices(DEV_INPUT_PATH, xaddevdev_epoll());
@@ -127,12 +127,15 @@ CAUSES(inotify_event, devinput_inotify_event) {
      * undefined behaviour if the device is not properly handled.
      */
     pr_info("Input device created or changed its attributes: %s\n", event->name);
-    timerfd_settime(timer_fd, 0,
-                    &(struct itimerspec){
-                        .it_value = {.tv_sec = 1, .tv_nsec = 0},
-                        .it_interval = {.tv_sec = 0, .tv_nsec = 0},
-                    },
-                    NULL);
+    if (timerfd_settime(timer_fd, 0,
+                        &(struct itimerspec){
+                            .it_value = {.tv_sec = 1, .tv_nsec = 0},
+                            .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+                        },
+                        NULL) < 0) {
+      pr_err("Failed to set timerfd\n");
+      exit(EXIT_FAILURE);
+    }
   } else if (event->mask & IN_DELETE) {
     pr_info("Input device deleted: %s\n", event->name);
     struct input_device *device = find_input_device(event->name);
