@@ -8,12 +8,24 @@
 #include <fcntl.h>
 #include <linux/input.h>
 #include <sys/inotify.h>
+#include <sys/timerfd.h>
 
 #define DEV_INPUT_PATH "/dev/input"
 
 static int scan_input_devices(const char *dirname, struct epoll *epoll);
 
+static int timer_fd = -1;
+
 CAUSES(epoll, devinput_epoll) {
+  timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+  if (timer_fd < 0) {
+    pr_err("Failed to create timerfd: %d (%s)\n", errno, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
+  if (add_epoll_event(xaddevdev_epoll(), timer_fd, EPOLLIN, (epoll_data_t){.ptr = &timer_fd}) < 0) {
+    pr_err("Failed to add timerfd to epoll: %d (%s)\n", errno, strerror(errno));
+    exit(EXIT_FAILURE);
+  }
   pr_info("Directory: %s\n", DEV_INPUT_PATH);
   int rc = scan_input_devices(DEV_INPUT_PATH, xaddevdev_epoll());
   if (rc < 0) {
@@ -50,6 +62,18 @@ CAUSES(epoll_event, devinput_epoll_event) {
   if (!(event->events & EPOLLIN)) {
     return;
   }
+
+  if (event->data.ptr == &timer_fd) {
+    uint64_t expirations;
+    ssize_t s = read(timer_fd, &expirations, sizeof(expirations));
+    if (s < 0) {
+      pr_err("Failed to read timerfd: %d (%s)\n", errno, strerror(errno));
+      exit(EXIT_FAILURE);
+    }
+    (void)scan_input_devices(DEV_INPUT_PATH, xaddevdev_epoll());
+    return;
+  }
+
   struct input_device *device = find_input_device_for_event(event);
   if (device == NULL) {
     return;
@@ -77,7 +101,7 @@ CAUSES(epoll_event, devinput_epoll_event) {
  */
 CAUSES(inotify, devinput_inotify) {
   int inotify_fd = *(int *)with;
-  if (inotify_add_watch(inotify_fd, DEV_INPUT_PATH, IN_ALL_EVENTS) < 0) {
+  if (inotify_add_watch(inotify_fd, DEV_INPUT_PATH, (IN_DELETE | IN_CREATE | IN_ATTRIB)) < 0) {
     pr_err("Failed to add inotify watch: %d (%s)\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
   }
@@ -89,15 +113,20 @@ CAUSES(inotify_event, devinput_inotify_event) {
     return;
   }
   pr_debug("Inotify event: wd=%d mask=0x%08x cookie=%u len=%u name=%s\n", event->wd, event->mask, event->cookie, event->len, event->name);
-  if (event->mask & IN_CREATE) {
+  if (event->mask & (IN_CREATE | IN_ATTRIB)) {
     /*
      * The newly-created entry in the /dev/input directory may not be an input
      * device. In such cases, do not attempt to add the device to the list of
      * input devices or to the epoll instance, as this could lead to errors or
      * undefined behaviour if the device is not properly handled.
      */
-    pr_info("Input device created: %s\n", event->name);
-    (void)scan_input_devices(DEV_INPUT_PATH, xaddevdev_epoll());
+    pr_info("Input device created or changed its attributes: %s\n", event->name);
+    timerfd_settime(timer_fd, 0,
+                    &(struct itimerspec){
+                        .it_value = {.tv_sec = 1, .tv_nsec = 0},
+                        .it_interval = {.tv_sec = 0, .tv_nsec = 0},
+                    },
+                    NULL);
   } else if (event->mask & IN_DELETE) {
     pr_info("Input device deleted: %s\n", event->name);
     struct input_device *device = find_input_device(event->name);
