@@ -126,7 +126,7 @@ CAUSES(input_event, xadd_input_event) {
   if (code == NULL) {
     return;
   }
-  redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device \"%s\" time %lld type %u typename %s code %u codename %s value %d",
+  redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device %s time %lld type %u typename %s code %u codename %s value %d",
                                    /* minimum ID */ min_id,
                                    /* device name */ name,
                                    /* timestamp in milliseconds */ time,
