@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2024, Roy Ratcliffe, Northumberland, United Kingdom
+ * SPDX-License-Identifier: MIT
+ */
+
 #include "cons.h"
 #include "epoll.h"
 
