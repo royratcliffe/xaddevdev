@@ -40,3 +40,6 @@ if(HIREDIS_FOUND)
 else()
     message(WARNING "hiredis library not found. Redis support will be disabled.")
 endif()
+
+# Install the executable to /usr/local/bin
+install(TARGETS xaddevdev DESTINATION bin)
