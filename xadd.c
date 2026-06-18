@@ -118,14 +118,8 @@ CAUSES(input_event, xadd_input_event) {
    * tables, making it easier to interpret the stream data and gain insights
    * into user interactions and device behaviour.
    */
-  const char *type = typename(input_event->type);
-  if (type == NULL) {
-    return;
-  }
-  const char *code = codename(input_event->type, input_event->code);
-  if (code == NULL) {
-    return;
-  }
+  const char *type = typename(input_event->type) ? : "?";
+  const char *code = codename(input_event->type, input_event->code) ? : "?";
   redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device %s time %lld type %u typename %s code %u codename %s value %d",
                                    /* minimum ID */ min_id,
                                    /* device name */ name,
