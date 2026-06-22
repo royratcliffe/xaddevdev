@@ -1,3 +1,4 @@
+#include "input_devices.h"
 #include "names.h"
 #include "pr.h"
 #include "when.h"
@@ -117,15 +118,65 @@ CAUSES(input_event, xadd_input_event) {
    * Redis stream entry, which provide more context and make it easier to
    * understand the nature of the input event when analysing the stream data.
    */
-  redisReply *reply = redisCommand(redis, "XADD input_event MINID ~ %lld * device %s time %lld type %u typename %s code %u codename %s value %d",
-                                   /* minimum ID */ min_id,
-                                   /* device name */ name,
-                                   /* timestamp in milliseconds */ time,
-                                   /* type as an integer */ input_event->type,
-                                   /* name of the type */ type,
-                                   /* code as an integer */ input_event->code,
-                                   /* name of the code */ code,
-                                   /* value */ input_event->value);
+  redisReply *reply;
+  struct input_absinfo absinfo;
+  if (input_event->type == EV_ABS && ioctl(device->fd, EVIOCGABS(input_event->code), &absinfo) == 0) {
+    pr_debug("Input event is an absolute event with code %u, absinfo: "
+             "value=%d, "
+             "minimum=%d, "
+             "maximum=%d, "
+             "fuzz=%d, "
+             "flat=%d, "
+             "resolution=%d\n",
+             input_event->code, absinfo.value, absinfo.minimum, absinfo.maximum, absinfo.fuzz, absinfo.flat, absinfo.resolution);
+    reply = redisCommand(redis,
+                         "XADD input_event MINID ~ %lld * "
+                         "device %s "
+                         "time %lld "
+                         "type %u "
+                         "typename %s "
+                         "code %u "
+                         "codename %s "
+                         "value %d "
+                         "absinfo_value %d "
+                         "absinfo_minimum %d "
+                         "absinfo_maximum %d "
+                         "absinfo_fuzz %d "
+                         "absinfo_flat %d "
+                         "absinfo_resolution %d",
+                         /* minimum ID */ min_id,
+                         /* device name */ input_device_name(device),
+                         /* timestamp in milliseconds */ time,
+                         /* type as an integer */ input_event->type,
+                         /* name of the type */ type,
+                         /* code as an integer */ input_event->code,
+                         /* name of the code */ code,
+                         /* value */ input_event->value,
+                         /* absolute info value */ absinfo.value,
+                         /* absolute info minimum */ absinfo.minimum,
+                         /* absolute info maximum */ absinfo.maximum,
+                         /* absolute info fuzz */ absinfo.fuzz,
+                         /* absolute info flat */ absinfo.flat,
+                         /* absolute info resolution */ absinfo.resolution);
+  } else {
+    reply = redisCommand(redis,
+                         "XADD input_event MINID ~ %lld * "
+                         "device %s "
+                         "time %lld "
+                         "type %u "
+                         "typename %s "
+                         "code %u "
+                         "codename %s "
+                         "value %d",
+                         /* minimum ID */ min_id,
+                         /* device name */ input_device_name(device),
+                         /* timestamp in milliseconds */ time,
+                         /* type as an integer */ input_event->type,
+                         /* name of the type */ type,
+                         /* code as an integer */ input_event->code,
+                         /* name of the code */ code,
+                         /* value */ input_event->value);
+  }
   if (reply == NULL) {
     pr_err("Failed to add input event to Redis: %s\n", redis->errstr);
     return;
