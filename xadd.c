@@ -69,7 +69,7 @@ CAUSES(input_event, xadd_input_event) {
   struct input_event *input_event = (struct input_event *)with;
   va_list args;
   va_start(args, with);
-  const char *name = va_arg(args, const char *);
+  struct input_device *device = va_arg(args, struct input_device *);
   va_end(args);
 
   /*
@@ -146,7 +146,7 @@ CAUSES(input_event, xadd_input_event) {
   }
   freeReplyObject(reply);
   pr_info("Input event: device=%s time=%lld type=%u typename=%s code=%u codename=%s value=%d\n",
-          /* device name */ name,
+          /* device name */ input_device_name(device),
           /* timestamp in milliseconds */ time,
           /* type as an integer */ input_event->type,
           /* name of the type */ type,
